@@ -1,7 +1,16 @@
 ![alt text](./cacherz_logo.png)
 
 
-# This is CACHERZ...and it can cache.
+# This is CACHERZ.
+
+Cacherz is a service built to get events from ethereum network. The service identifies events definitions in your contract.
+
+There is an actor created per each event. The event is registered as a filter by json-rpc. Each event filter is a different data pipeline. After event filter registration Cacherz asks for more events. It starts from the last block number and log number attributed to events already in the database. When ethereum actor gets the answer from Ethereum network it decodes it and sends it into write actor which is responsible for writing data into database. 
+
+
+![alt text](cacherz_schema.png)
+
+
 ## Features:
 
 * Async and mutithreaded by default
@@ -28,14 +37,14 @@
   * Windows: you can find instructions here: https://github.com/facebook/rocksdb/blob/master/INSTALL.md
 * In a project folder type `cargo build`
 
-### Hey! Pss....yeah you! ...Would you like to run some cache? 
+### Hey! Pss...yeah you! ...Would you like to run some cache? 
 
-* to run cache...you have to go to `target` folder. Then `debug` folder...and thats it. 
-* now ...follow me Alice into that hole in the ground...
-    * To run cache you have to setup a bunch of flags...like EU parlament. 
+* to run cache...you have to go to `target` folder. Then `debug` folder and thats it. 
+* now follow me Alice into that hole in the ground
+    * To run cache you have to setup a bunch of flags. 
 
     First of all two enviroment: 
-  * `RUST_BACKTRACE=1` and `RUST_LOG=1`...why? There is a big propability that something will fail...and we have to know why..
+  * `RUST_BACKTRACE=1` and `RUST_LOG=1`...why? There is a big propability that something will fail...and we have to know why;)
   Then we can type: `./cacherz` with flags:
   * `--webHost` it is a host of your cache maschine (for localhost it is just "localhost")
   * `--webPort` the same as abowe ...but for port.
