@@ -1,0 +1,37 @@
+[package]
+name = "rust_cache"
+version = "0.1.0"
+authors = ["m_v_m <michmajchrzak@gmail.com>"]
+
+[dependencies]
+reqwest="0.9.2"
+serde_json = "1.0"
+actix = "0.7"
+rustc-hex = "2.0.1"
+uuid = {version = "0.7", features = ["v4"]}
+serde = "1.0"
+serde_derive = "1.0"
+chrono = "0.4"
+tiny-keccak = "1.4.2"
+ethabi = "6.1.0"
+log = "0.4"
+env_logger = "0.6.0"
+futures = "0.1"
+actix-lua = "0.5"
+lazy_static = "1.1.0"
+actix-web = "0.7"
+docopt = "1"
+
+[dependencies.rocksdb]
+git = "https://github.com/pingcap/rust-rocksdb.git"
+
+[lib]
+name = "lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cacherz"
+path = "src/main.rs"
+
+[dev-dependencies]
+tempdir = "0.3"
