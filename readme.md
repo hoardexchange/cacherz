@@ -17,7 +17,7 @@ There is an actor created per each event. The event is registered as a filter by
 * Works with all modern versions of Solidity
 * Works with all ethereum networks.
 * Json on output side
-* Compres data by default
+* Compress data by default
 * Support prefixes
 
 ## Requirements and setup.
@@ -44,10 +44,10 @@ There is an actor created per each event. The event is registered as a filter by
     * To run cache you have to setup a bunch of flags. 
 
     First of all two enviroment: 
-  * `RUST_BACKTRACE=1` and `RUST_LOG=1`...why? There is a big propability that something will fail...and we have to know why;)
+  * `RUST_BACKTRACE=1` and `RUST_LOG=1`...why? There is a big probability that something will fail...and we have to know why;)
   Then we can type: `./cacherz` with flags:
   * `--webHost` it is a host of your cache maschine (for localhost it is just "localhost")
-  * `--webPort` the same as abowe ...but for port.
+  * `--webPort` the same as above ...but for port.
   *   `--ethHost` host of your Eth node
   *    `--ethPort` prot of your Eth node
   *  `--abiFilePath` path to your abi file 
