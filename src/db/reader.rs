@@ -44,6 +44,7 @@ pub fn get_events_by_prefix(db: CacheDB, column_family: String, query: String, s
         let mut key_count = 0;
         let iter_key_string: String = from_utf8(iter.key()).expect(&format!("Cannot change {:?} into string", iter.key())).to_string();
         let mut key_prefix: Vec<u8> = get_prefix_from_query(iter_key_string, prefix_size);
+
         let mut key: Vec<u8> = Vec::from(iter.key());
         while iter.valid() && size > key_count && key_prefix == prefix && key >= query_vec_u8 {
           key_count = key_count + 1;
@@ -56,9 +57,9 @@ pub fn get_events_by_prefix(db: CacheDB, column_family: String, query: String, s
             },
             None => {()}
           };
-          key_prefix = get_prefix_from_query(from_utf8(iter.key()).expect(&format!("Cannot change {:?} into string", iter.key())).to_string(), prefix_size);
           key = Vec::from(iter.key());
           iter.next();
+          key_prefix = get_prefix_from_query(from_utf8(iter.key()).expect(&format!("Cannot change {:?} into string", iter.key())).to_string(), prefix_size);
         };
       }
       return Ok(return_msg);

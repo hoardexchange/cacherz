@@ -168,7 +168,15 @@ impl<'a> MainActor {
             30
           }
     };
-    web::run("localhost".to_string(), "8080".to_string(), db, prefix_length);
+    let web_host: String = match self.get_settings_data_default("webHost", Settings::PureString(String::from("localhost"))) {
+      Settings::PureString(webHost) => webHost,
+      _ => String::from("")
+    };
+    let web_port: String = match self.get_settings_data_default("webPort", Settings::PureString(String::from("8080"))) {
+      Settings::PureString(webHost) => webHost,
+      _ => String::from("")
+    };
+    web::run(web_host, web_port, db, prefix_length);
   }
 
   /// Function responsible for crating read actor
