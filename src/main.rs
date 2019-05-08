@@ -63,6 +63,8 @@ fn main() {
   let settings_column_families: Vec<&'static str> = vec!("events", "aggregations", "stats", "settings", "filters", "log");
   let settings_host: String = args.flag_ethHost.clone();
   let settings_port: String = args.flag_ethPort.clone();
+  let settings_webPort: String = args.flag_webPort.clone();
+  let settings_webHost: String = args.flag_webHost.clone();
   let settings_db_path: String = args.flag_rocksdbPath;
   let settings_prefix: Option<usize> = args.flag_prefixSize;
 
@@ -74,6 +76,8 @@ fn main() {
   settings.insert("column_families".to_string(), Settings::VecStr(settings_column_families));
   settings.insert("host".to_string(), Settings::PureString(settings_host));
   settings.insert("port".to_string(), Settings::PureString(settings_port));
+  settings.insert("webPort".to_string(), Settings::PureString(settings_webPort));
+  settings.insert("webHost".to_string(), Settings::PureString(settings_webHost));
   settings.insert("db_path".to_string(), Settings::PureString(settings_db_path));
   settings.insert("prefix".to_string(), prefix);
   let m_actor: MainActor = MainActor{system_name: "EventStreamer".to_string(), eth_actors: eth_actors, write_actor: None, read_actor: None, settings: Some(settings), addr: None, db: None};
