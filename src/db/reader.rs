@@ -57,9 +57,11 @@ pub fn get_events_by_prefix(db: CacheDB, column_family: String, query: String, s
             },
             None => {()}
           };
-          key = Vec::from(iter.key());
           iter.next();
-          key_prefix = get_prefix_from_query(from_utf8(iter.key()).expect(&format!("Cannot change {:?} into string", iter.key())).to_string(), prefix_size);
+          if (iter.valid() == true) {
+            key_prefix = get_prefix_from_query(from_utf8(iter.key()).expect(&format!("Cannot change {:?} into string", iter.key())).to_string(), prefix_size);
+            key = Vec::from(iter.key());
+          }
         };
       }
       return Ok(return_msg);

@@ -35,3 +35,17 @@ path = "src/main.rs"
 
 [dev-dependencies]
 tempdir = "0.3"
+
+
+[llvm]
+optimize = true
+release-debuginfo = true
+assertions = false
+
+[rust]
+optimize = true
+codegen-units = 1
+debug-assertions = false
+debuginfo = true
+debuginfo-lines = true
+jemalloc = false 
