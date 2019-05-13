@@ -6,4 +6,5 @@ pub enum Settings {
   VecI64(Vec<i64>),
   VecI32(Vec<i32>),
   USize(usize),
+  Empty
 }

@@ -4,6 +4,7 @@ use actix::{Actor, Addr, Context, Handler, Message, AsyncContext};
 use eth::eth_json_rpc;
 use std::time::Duration;
 use chrono::prelude::*;
+use reqwest::Client;
 use ethabi::{Event, EventParam, Error};
 use std::collections::HashMap;
 use actors::structs::settings::Settings;
@@ -130,6 +131,26 @@ impl EthActor {
     }
   }
 
+  pub fn send_to_webHook(&self, webHookUrl: String, msg: (String, String)) -> Result<(), String> {
+    let http_client = Client::new();
+      let mut params = HashMap::new();
+      let (event_key, event_body) = msg;
+      params.insert("key", event_key);
+      params.insert("value", event_body);
+      let mut response = http_client.post(&webHookUrl)
+        .json(&params)
+        .send();
+      match response {
+        Ok(valid_response) => {
+          info!("Response from webhook: {:?}", valid_response);
+        },
+        Err(error_webhook) => {
+          error!("WebHook error: {:?}", error_webhook);
+        }
+      }
+    Ok(())
+  }
+  
   fn get_new_filter(&mut self ,host: String, port: String, prefix: usize) -> Option<String> {
     let event_name = self.clone().event.name;
     let last_event_result = self.clone().db.clone()
@@ -256,7 +277,7 @@ impl Handler<GetEvents> for EthActor{
             Vec::new()
           },
         };
-        _decode_result.into_iter().for_each(|(event_prefix, decode_result)| {
+        _decode_result.iter().for_each(|(event_prefix, decode_result)| {
           match decode_result {
             Ok(d_result) => {
               let mut event_params: Vec<(EventPrefixParam, usize)> = Vec::new();
@@ -267,7 +288,20 @@ impl Handler<GetEvents> for EthActor{
               match json_value {
                 Ok(j_val) => {
                   let msg_content = (_event_prefix.generate_key(), j_val);
-                  self.send_to_write(msg_content, MsgType::Event);
+                  self.send_to_write(msg_content.clone(), MsgType::Event);
+                  // send to webHook
+                  let web_hook_settings = self.get_settings_data_default("webHook", Settings::Empty);
+                  if let Settings::PureString(web_hook_url) = web_hook_settings {
+                    let result = self.send_to_webHook(web_hook_url, msg_content);
+                    match result {
+                      Ok(_) => {
+                        info!("Message for event {} has been sended to webHook.", self.event.name);
+                      },
+                      Err(_) => {
+                        error!("Cannot send message into webhook for event {}", self.event.name);
+                      }
+                    };
+                  };
                 },
                 Err(error_convert_json_to_string) => {
                   error!("Cannot convert json: {:?} to string. Error: {}", d_result, error_convert_json_to_string);

@@ -17,7 +17,7 @@ const USAGE: &'static str = "
   Cacherz.
 
   Usage:
-  cacherz --ethHost <ethHost> --ethPort <ethPort> --webHost <webHost> --webPort <webPort> --abiFilePath <abiFilePath> --rocksdbPath <rocksdbPath>
+  cacherz --ethHost <ethHost> --ethPort <ethPort> --webHost <webHost> --webPort <webPort> --abiFilePath <abiFilePath> --rocksdbPath <rocksdbPath> --webHook <webHook>
   cacherz --version
 
   Options:
@@ -30,6 +30,7 @@ const USAGE: &'static str = "
   --abiFilePath=<abiFilePath>     Full path to abi file.
   --rocksdbPath=<rocksdbPath>     Full path to rocksdb main folder.
   --prefixSize=<prefixSize>       Size of a prefix
+  --webHook=<webHook>     webHook link
 ";
 
 #[derive(Debug,Deserialize)]
@@ -40,7 +41,8 @@ struct Args {
   flag_webPort: String,
   flag_abiFilePath: String,
   flag_rocksdbPath: String,
-  flag_prefixSize: Option<usize>
+  flag_prefixSize: Option<usize>,
+  flag_webHook: Option<String>
 }
 
 fn main() {
@@ -49,15 +51,6 @@ fn main() {
     .and_then(|d| d.deserialize())
     .unwrap_or_else(|e| e.exit());
   let mut eth_actor_settings: HashMap<String, Settings> = HashMap::new();
-  eth_actor_settings.insert("host".to_string(), Settings::PureString(args.flag_ethHost.clone()));
-  eth_actor_settings.insert("port".to_string(), Settings::PureString(args.flag_ethPort.clone()));
-  let file_path = String::from(args.flag_abiFilePath);
-  let eth_contract = eth_contract_loader::get_abi(file_path.clone())
-    .expect(&format!("Can not get abi from: {}", file_path));
-  let mut eth_actors : Vec<EthActor> = Vec::new();
-  for event in eth_contract.events {
-    eth_actors.push(EthActor::create_new(event.1, eth_actor_settings.clone()));
-  }
   let mut settings: HashMap<String, Settings> = HashMap::new();
 
   let settings_column_families: Vec<&'static str> = vec!("events", "aggregations", "stats", "settings", "filters", "log");
@@ -67,10 +60,19 @@ fn main() {
   let settings_webHost: String = args.flag_webHost.clone();
   let settings_db_path: String = args.flag_rocksdbPath;
   let settings_prefix: Option<usize> = args.flag_prefixSize;
+  let settings_webHook: Option<String> = args.flag_webHook;
 
   let prefix = match settings_prefix {
     Some(prefix) => Settings::USize(prefix),
     None => Settings::USize(30)
+  };
+  match settings_webHook {
+    Some(web_hook_url) => {
+      let web_hook_settings: Settings = Settings::PureString(web_hook_url);
+      eth_actor_settings.insert("webHook".to_string(), web_hook_settings.clone());
+      settings.insert("webHook".to_string(), web_hook_settings);
+      },
+    None => ()
   };
 
   settings.insert("column_families".to_string(), Settings::VecStr(settings_column_families));
@@ -80,6 +82,17 @@ fn main() {
   settings.insert("webHost".to_string(), Settings::PureString(settings_webHost));
   settings.insert("db_path".to_string(), Settings::PureString(settings_db_path));
   settings.insert("prefix".to_string(), prefix);
+
+  eth_actor_settings.insert("host".to_string(), Settings::PureString(args.flag_ethHost.clone()));
+  eth_actor_settings.insert("port".to_string(), Settings::PureString(args.flag_ethPort.clone()));
+  
+  let file_path = String::from(args.flag_abiFilePath);
+  let eth_contract = eth_contract_loader::get_abi(file_path.clone())
+    .expect(&format!("Can not get abi from: {}", file_path));
+  let mut eth_actors : Vec<EthActor> = Vec::new();
+  for event in eth_contract.events {
+    eth_actors.push(EthActor::create_new(event.1, eth_actor_settings.clone()));
+  }
   let m_actor: MainActor = MainActor{system_name: "EventStreamer".to_string(), eth_actors: eth_actors, write_actor: None, read_actor: None, settings: Some(settings), addr: None, db: None};
   m_actor.run();
 }

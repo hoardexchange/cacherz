@@ -1,9 +1,7 @@
 extern crate reqwest;
 extern crate rocksdb;
-// extern crate sha3;
 extern crate serde;
 extern crate chrono;
-// extern crate hex;
 extern crate ethabi;
 extern crate futures;
 
