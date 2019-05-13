@@ -18,9 +18,13 @@ impl EventPrefix {
           EventPrefixParam::UInt64(u_64) => u_64.to_string()
         };
         let mut _empty_param_with_cap: String = String::with_capacity(param_len);
-        for _ in 0..(param_len - _param_string.len()) {
+        if param_len > _param_string.len() {
+          for _ in 0..(param_len - _param_string.len()) {
+            _empty_param_with_cap.push('-');
+          };
+        } else {
           _empty_param_with_cap.push('-');
-        };
+        }
         format!("{}{}", _param_string, _empty_param_with_cap)
         })
       .fold("".to_string(), |acc, elem| format!("{}{}", acc, elem))

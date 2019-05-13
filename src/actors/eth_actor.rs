@@ -268,8 +268,8 @@ impl Handler<GetEvents> for EthActor{
             let _event = event.clone();
             let block_log = format!("{}-{}", _event.blockNumber, _event.logIndex);
             self.last_block_log = Some(block_log);
-            event_params.push((EventPrefixParam::PureString(_event.blockNumber), 15));
-            event_params.push((EventPrefixParam::PureString(_event.logIndex), 10));
+            event_params.push((EventPrefixParam::PureString(_event.blockNumber), 0));
+            event_params.push((EventPrefixParam::PureString(_event.logIndex), 0));
             (EventPrefix{params: event_params}, event.decode_hashmap(self.get_event_inputs()))
             }).collect::<Vec<(EventPrefix, Result<HashMap<String, String>, Error>)>>(),
           Err(err_get_new_events) => {
