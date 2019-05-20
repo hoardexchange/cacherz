@@ -74,7 +74,7 @@ fn err_msg(msg: String) -> String {
 fn get_last_event_from_db((state, query_string): (State<WebActor>, Query<HashMap<String, String>>)) -> Result<HttpResponse, Error> {
   let event_name: String = match query_string.get("event_name") {
     Some(e_n) => e_n.to_string(),
-    None => return Ok(HttpResponse::Ok().content_type("json/application").body("There is no requested param event_name".to_string()))
+    None => return Ok(HttpResponse::Ok().content_type("application/json").body("There is no requested param event_name".to_string()))
   };
   let event_name_prefixed: String = parse_string_by_prefix(event_name, state.prefix);
   let last_event_block_log = get_event_by_key(state.db.clone(), String::from("aggregations"), event_name_prefixed);
@@ -91,27 +91,27 @@ fn get_last_event_from_db((state, query_string): (State<WebActor>, Query<HashMap
 fn get_events((state, query_string): (State<WebActor>, Query<HashMap<String, String>>)) -> Result<HttpResponse, Error> {
   let column_family: String = match query_string.get("column_family") {
     Some(cf) => cf.to_string(),
-    None => return Ok(HttpResponse::Ok().content_type("json/application").body("There is no requested param column_family".to_string()))
+    None => return Ok(HttpResponse::Ok().content_type("application/json").body("There is no requested param column_family".to_string()))
   };
   let key: String = match query_string.get("key") {
     Some(q) => q.to_string(),
-    None => return Ok(HttpResponse::Ok().content_type("json/application").body(err_msg("There is no requested param key".to_string())))
+    None => return Ok(HttpResponse::Ok().content_type("application/json").body(err_msg("There is no requested param key".to_string())))
   };
   let block_nr: String = match query_string.get("block") {
     Some(q) => q.to_string(),
-    None => return Ok(HttpResponse::Ok().content_type("json/application").body(err_msg("There is no requested param block".to_string())))
+    None => return Ok(HttpResponse::Ok().content_type("application/json").body(err_msg("There is no requested param block".to_string())))
   };
   let log_nr: String = match query_string.get("log") {
     Some(q) => q.to_string(),
-    None => return Ok(HttpResponse::Ok().content_type("json/application").body(err_msg("There is no requested param log".to_string())))
+    None => return Ok(HttpResponse::Ok().content_type("application/json").body(err_msg("There is no requested param log".to_string())))
   };
   let size: i32 = match query_string.get("size") {
     Some(s) => s.parse().unwrap(),
-    None => return Ok(HttpResponse::Ok().content_type("json/application").body(err_msg("There is no requested param size".to_string())))
+    None => return Ok(HttpResponse::Ok().content_type("application/json").body(err_msg("There is no requested param size".to_string())))
   };
   let method: String = match query_string.get("method") {
     Some(m) => m.to_string(),
-    None => return Ok(HttpResponse::Ok().content_type("json/application").body(err_msg("There is no requested param method".to_string())))
+    None => return Ok(HttpResponse::Ok().content_type("application/json").body(err_msg("There is no requested param method".to_string())))
   };
   let query: String = build_query(key, block_nr, log_nr, state.prefix);
   let result: JsonWebResponse = match method.as_ref() {
@@ -142,6 +142,7 @@ pub fn run(host: String, port: String, db: CacheDB, prefix: usize) {
         App::with_state(WebActor{db: db.clone(), prefix: prefix})
             // enable logger
             .middleware(middleware::Logger::default())
+            .resource("/get_events", |r| r.method(http::Method::GET).with(get_events))
             .resource("/get_events/", |r| r.method(http::Method::GET).with(get_events))
             .resource("/last_event/", |r| r.method(http::Method::GET).with(get_last_event_from_db))
     }).bind(format!("{}:{}", host, port))
