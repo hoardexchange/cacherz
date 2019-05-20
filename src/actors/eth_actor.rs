@@ -11,12 +11,14 @@ use actors::structs::settings::Settings;
 use actors::traits::setupable::Setupable;
 use actors::rocks_write_actor::{RocksWriteActor, WriteMsg, MsgContentType, MsgType};
 use db::cachedb::CacheDB;
+use db::reader::Event as DbEvent;
 use eth::structs::eventprefix::EventPrefix;
 use eth::structs::eventprefixparam::EventPrefixParam;
 use db::reader::{get_by_key_with_default, get_by_key};
 use std::str::from_utf8;
 use std::time::{SystemTime, UNIX_EPOCH};
-use serde_json::{Value};
+use serde_json;
+
 
 #[derive(Debug, Message)]
 enum Ping {
@@ -29,6 +31,12 @@ enum Ping {
 enum QueryType {
   Prefix(String, usize),
   Key(String)
+}
+
+#[derive(Serialize, Deserialize)]
+struct JsonHookResponse {
+  key: String,
+  params: Vec<DbEvent>
 }
 
 #[derive(Message)]
@@ -131,23 +139,22 @@ impl EthActor {
     }
   }
 
-  pub fn send_to_webHook(&self, webHookUrl: String, msg: (String, String)) -> Result<(), String> {
+  pub fn send_to_webHook(&self, web_hook_url: String, msg: (String, String)) -> Result<(), String> {
     let http_client = Client::new();
-      let mut params = HashMap::new();
-      let (event_key, event_body) = msg;
-      params.insert("key", event_key);
-      params.insert("value", event_body);
-      let mut response = http_client.post(&webHookUrl)
-        .json(&params)
-        .send();
-      match response {
-        Ok(valid_response) => {
-          info!("Response from webhook: {:?}", valid_response);
-        },
-        Err(error_webhook) => {
-          error!("WebHook error: {:?}", error_webhook);
-        }
+    let (event_key, event_body) = msg;
+    let event_body_json = serde_json::from_str(&event_body).map_err(|_| {String::from("Cannot decode database content to json")})?;
+    let json_response = JsonHookResponse{ key: event_key, params: event_body_json};
+    let response = http_client.post(&web_hook_url)
+      .json(&json_response)
+      .send();
+    match response {
+      Ok(valid_response) => {
+        info!("Response from webhook: {:?}", valid_response);
+      },
+      Err(error_webhook) => {
+        error!("WebHook error: {:?}", error_webhook);
       }
+    }
     Ok(())
   }
   
@@ -157,7 +164,7 @@ impl EthActor {
       .ok_or(String::from("There is no database atached to eth actor"))
       .and_then(| db | get_by_key(db, String::from("aggregations"), event_name.clone()))
       .and_then(| return_object | { serde_json::from_str(&return_object).map_err(| err | format!("Can not convert string into Value. Error: {}", err)) })
-      .and_then(| json_map : Value | { json_map.as_object().cloned().ok_or(String::from("Can not cast json_value into object")) })
+      .and_then(| json_map : serde_json::Value | { json_map.as_object().cloned().ok_or(String::from("Can not cast json_value into object")) })
       .and_then(| json_object | { json_object.get("last_block").cloned().ok_or(String::from("There is no last_block in json_object")) })
       .and_then(| val | { val.as_str().and_then(| s | Some(s.to_string())).ok_or(String::from("Cannot cast json_object to string")) })
       .map_err(| err | {

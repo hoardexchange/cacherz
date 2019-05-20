@@ -15,7 +15,6 @@ struct FixedPrefixTransform {
 
 impl SliceTransform for FixedPrefixTransform {
     fn transform<'a>(&mut self, key: &'a [u8]) -> &'a [u8] {
-        // println!("{:?}", from_utf8(key).unwrap());
         if self.prefix_len <= key.len() {
           &key[..self.prefix_len]
         } else {
