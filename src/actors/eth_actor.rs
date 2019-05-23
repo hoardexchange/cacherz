@@ -14,7 +14,7 @@ use db::cachedb::CacheDB;
 use db::reader::Event as DbEvent;
 use eth::structs::eventprefix::EventPrefix;
 use eth::structs::eventprefixparam::EventPrefixParam;
-use db::reader::{get_by_key_with_default, get_by_key};
+use db::reader::{get_by_key_with_default, get_by_key, get_events_by_prefix};
 use std::str::from_utf8;
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json;
@@ -25,7 +25,8 @@ enum Ping {
   IsAlive(u64),
   LastEvent,
   FilterId(String),
-  LastTimestamp
+  LastTimestamp,
+  SetupNode
 }
 
 enum QueryType {
@@ -215,17 +216,14 @@ impl Actor for EthActor {
     let prefix: usize = self.get_prefix();
     self.filter_id = self.get_new_filter(host, port, prefix);
     self.addr = Some(ctx.address());
-    match self.db.clone() {
-      Some(db) => {
-        let last_block_log_from_db: String = get_by_key_with_default(db, String::from("aggregations"), self.event.name.clone(), String::from("0x0-0x0"));
-        self.last_block_log = Some(last_block_log_from_db);
-      }, 
-      None => {
-        error!("There is no db attached to Eth Actor: {}", self.event.name);
-      }
-    };
     info!("I am EthEventActor {} and I am alive! Context: {:?}", self.id.to_string(), ctx.address());
-    ctx.address().do_send(GetEvents{});
+    let actor_addr = match self.get_addr() {
+      Some(addr) => addr,
+      None => return (),
+    };
+    ctx.run_later(Duration::new(0, 1000000000), move |_, _| {
+      actor_addr.do_send(Ping::SetupNode);
+      });
   }
 }
 
@@ -248,6 +246,18 @@ impl Handler<Ping> for EthActor {
     match msg {
       Ping::FilterId(new_filter_id) => {
         self.filter_id = Some(new_filter_id);
+      },
+      Ping::SetupNode => {
+        match self.db.clone() {
+          Some(db) => {
+            let last_block_log_from_db: String = get_by_key_with_default(db, String::from("aggregations"), self.event.name.clone(), String::from("0x0-0x0"));
+            self.last_block_log = Some(last_block_log_from_db);
+            ctx.address().do_send(GetEvents{});
+          }, 
+          None => {
+            error!("There is no db attached to Eth Actor: {}", self.event.name);
+          }
+        };
       },
       _ => ()
     };
@@ -275,6 +285,11 @@ impl Handler<GetEvents> for EthActor{
             self.last_block_log = Some(block_log);
             event_params.push((EventPrefixParam::PureString(_event.blockNumber), 0));
             event_params.push((EventPrefixParam::PureString(_event.logIndex), 0));
+            let last_block_log_prefix = self.clone().last_block_log.unwrap();
+            let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+            let ts: u128 = since_the_epoch.as_secs() as u128 * 1000 + since_the_epoch.subsec_millis() as u128;
+            let msg: String = format!("{{\"last_block\": \"{}\", \"ts\": {}}}", last_block_log_prefix, ts);
+            self.send_to_write((self.clone().event.name, msg), MsgType::Aggregation);
             (EventPrefix{params: event_params}, event.decode_hashmap(self.get_event_inputs()))
             }).collect::<Vec<(EventPrefix, Result<HashMap<String, String>, Error>)>>(),
           Err(err_get_new_events) => {
@@ -318,11 +333,6 @@ impl Handler<GetEvents> for EthActor{
             }
           }
       });
-      let last_block_log_prefix = self.clone().last_block_log.unwrap();
-      let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-      let ts: u128 = since_the_epoch.as_secs() as u128 * 1000 + since_the_epoch.subsec_millis() as u128;
-      let msg: String = format!("{{\"last_block\": \"{}\", \"ts\": {}}}", last_block_log_prefix, ts);
-      self.send_to_write((self.clone().event.name, msg), MsgType::Aggregation);
       },
       None => {
         let prefix: usize = self.get_prefix();
