@@ -33,12 +33,6 @@ enum QueryType {
   Key(String)
 }
 
-#[derive(Serialize, Deserialize)]
-struct JsonHookResponse {
-  key: String,
-  params: Vec<DbEvent>
-}
-
 #[derive(Message)]
 pub struct GetEvents;
 
@@ -142,20 +136,24 @@ impl EthActor {
   pub fn send_to_webHook(&self, web_hook_url: String, msg: (String, String)) -> Result<(), String> {
     let http_client = Client::new();
     let (event_key, event_body) = msg;
-    let event_body_json = serde_json::from_str(&event_body).map_err(|_| {String::from("Cannot decode database content to json")})?;
-    let json_response = JsonHookResponse{ key: event_key, params: event_body_json};
+    let mut response_hashmap = HashMap::new();
+    response_hashmap.insert("key", event_key);
+    response_hashmap.insert("params", serde_json::to_string(&event_body).unwrap());
     let response = http_client.post(&web_hook_url)
-      .json(&json_response)
-      .send();
+      .json(&response_hashmap)
+      .send().map_err(| err | {
+        format!("ERROR: {:?}", err)
+      });
     match response {
       Ok(valid_response) => {
         info!("Response from webhook: {:?}", valid_response);
+        Ok(())
       },
       Err(error_webhook) => {
         error!("WebHook error: {:?}", error_webhook);
+        Err(format!("Cannot make post into {}", web_hook_url))
       }
     }
-    Ok(())
   }
   
   fn get_new_filter(&mut self ,host: String, port: String, prefix: usize) -> Option<String> {
@@ -168,7 +166,7 @@ impl EthActor {
       .and_then(| json_object | { json_object.get("last_block").cloned().ok_or(String::from("There is no last_block in json_object")) })
       .and_then(| val | { val.as_str().and_then(| s | Some(s.to_string())).ok_or(String::from("Cannot cast json_object to string")) })
       .map_err(| err | {
-        error!("There was an problem with getting new filter. {}", err);
+        warn!("There was an problem with getting new filter. {}", err);
         String::from("0x0-0x0")
       });
     let last_event = match last_event_result {
@@ -304,14 +302,14 @@ impl Handler<GetEvents> for EthActor{
                       Ok(_) => {
                         info!("Message for event {} has been sended to webHook.", self.event.name);
                       },
-                      Err(_) => {
-                        error!("Cannot send message into webhook for event {}", self.event.name);
+                      Err(err) => {
+                        error!("Cannot send message into webhook for event {}, REASON: {:?}", self.event.name, err);
                       }
                     };
                   };
                 },
                 Err(error_convert_json_to_string) => {
-                  error!("Cannot convert json: {:?} to string. Error: {}", d_result, error_convert_json_to_string);
+                  error!("json: {:?} to string. Error: {}", d_result, error_convert_json_to_string);
                 }
               };
             }, 

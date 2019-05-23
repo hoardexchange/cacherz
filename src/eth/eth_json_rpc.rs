@@ -24,7 +24,7 @@ pub fn create_new_filter(eth_addr: String, eth_port: String, eth_event_hex: Stri
           .read_to_string(&mut buf)
           .expect("Failed to read response");
         let filter_id: String =
-          get_filter_id(buf.clone()).expect(&format!("Can not receive id from {}", buf));
+          get_filter_id(buf.clone()).expect(&format!("Can not receive id from {:?}", buf));
         Ok(filter_id)
       }
       Err(error) => {
