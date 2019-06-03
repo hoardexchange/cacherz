@@ -29,6 +29,12 @@ enum Ping {
   SetupNode
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct JsonResponse {
+  key: String,
+  params: HashMap<String, serde_json::Value>
+}
+
 enum QueryType {
   Prefix(String, usize),
   Key(String)
@@ -137,11 +143,9 @@ impl EthActor {
   pub fn send_to_webHook(&self, web_hook_url: String, msg: (String, String)) -> Result<(), String> {
     let http_client = Client::new();
     let (event_key, event_body) = msg;
-    let mut response_hashmap = HashMap::new();
-    response_hashmap.insert("key", event_key);
-    response_hashmap.insert("params", serde_json::to_string(&event_body).unwrap());
+    let json_response: JsonResponse = JsonResponse{key: String::from(event_key), params: serde_json::from_str(&event_body).unwrap()};
     let response = http_client.post(&web_hook_url)
-      .json(&response_hashmap)
+      .json(&json_response)
       .send().map_err(| err | {
         format!("ERROR: {:?}", err)
       });
